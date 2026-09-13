@@ -28,10 +28,30 @@ export class CatalogService {
    *  guard at all. */
   private generation = 0;
 
+  /** The in-flight {@link warm} search, so concurrent callers share one spawn. */
+  private warming: Promise<unknown> | null = null;
+
   constructor(private readonly scopes: ScopeService) {}
 
   state(): CatalogState {
     return { items: this.items, syncedAt: this.syncedAt };
+  }
+
+  /** Runs the first search of the session if none has landed yet.
+   *
+   *  The sidebar is this cache's only regular writer, and it searches only once
+   *  it is VISIBLE — so a details panel restored at boot with the sidebar
+   *  collapsed read an empty cache, and its catalog-only signals (the rating,
+   *  the pull count) stayed blank until a sidebar refresh happened to fill it.
+   *  Cheap: grim answers an un-refreshed search from its own disk catalog. */
+  async warm(projectConfigured: boolean): Promise<void> {
+    if (this.syncedAt !== null) {
+      return;
+    }
+    this.warming ??= this.search('', { projectConfigured }).finally(() => {
+      this.warming = null;
+    });
+    await this.warming;
   }
 
   async search(

@@ -94,3 +94,24 @@ suite('catalog search ordering', () => {
     );
   });
 });
+
+suite('catalog warm', () => {
+  test('warm searches once when nothing has landed, and never again after', async () => {
+    const { scopes, resolveNext } = deferredScopes();
+    const catalog = new CatalogService(scopes);
+
+    // Two restored details panels warm concurrently: one spawn between them.
+    const first = catalog.warm(false);
+    const second = catalog.warm(false);
+    resolveNext([searchItem({ repo: 'reg/one' })])();
+    await Promise.all([first, second]);
+    assert.deepStrictEqual(
+      catalog.state().items.map((i) => i.repo),
+      ['reg/one'],
+    );
+
+    // Warm is a no-op once a search has landed — nothing in flight to settle.
+    await catalog.warm(false);
+    assert.throws(() => resolveNext([]), /no search was in flight/);
+  });
+});

@@ -208,6 +208,7 @@ What to look at:
 | `reviewer` | A measured **zero**: the badge renders `0`. It must not look like the row above. |
 | `rust-style` | A count with no stamp — the badge tooltip shows the bare figure. |
 | `security-baseline` | A stamp three months old in the badge tooltip. |
+| a restored details tab | Close the sidebar, restart the debug host with the tab open: the DOWNLOADS and RATING panels are there on the first paint, with no sidebar refresh. |
 | the panel's placement | It is its **own** panel, not a row inside RATING. Check it on an unrated-but-counted row (`support-desk`): RATING omits itself entirely there, and the count must survive that. |
 | `rust-style` / `support-desk` | No breakdown published — the total stands alone. |
 

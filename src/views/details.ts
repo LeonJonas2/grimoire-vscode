@@ -1191,7 +1191,12 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
     repo: string,
     snapshot: Snapshot,
   ): Promise<{ vm: DetailsVM; entry: DetailsCacheEntry | null }> {
-    const { describe, fetchValue, fetchError, companion } = await this.resolveContent(repo);
+    // assembleVM reads the catalog row; see CatalogService.warm for why it may
+    // not be there yet. Alongside the content probes, not before them.
+    const [{ describe, fetchValue, fetchError, companion }] = await Promise.all([
+      this.resolveContent(repo),
+      this.catalog.warm(projectSearchable(snapshot)),
+    ]);
     const vm = this.assembleVM(repo, snapshot, describe, fetchValue, companion);
     if (fetchError !== null) {
       vm.error = fetchError;
@@ -1536,10 +1541,15 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
     if (!stale) {
       // First open of the session (no snapshot yet): await a fresh one, as before.
       const fresh = await this.scopes.snapshot();
+      await this.catalog.warm(projectSearchable(fresh));
       await this.postBuilt(repo, panel, this.vmFromCache(repo, cached, fresh));
       await this.revalidate(repo, panel, cached, fresh);
       return;
     }
+    // Once per session, and the cached-snapshot paint waits for it: the row it
+    // reads is what carries the rating and the pull count, and a panel restored
+    // at boot has no sidebar search to have filled it in (CatalogService.warm).
+    await this.catalog.warm(projectSearchable(stale));
     await this.postBuilt(repo, panel, this.vmFromCache(repo, cached, stale));
     const fresh = await this.scopes.snapshot();
     if (this.installSlice(repo, fresh) !== this.installSlice(repo, stale)) {

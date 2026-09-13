@@ -398,6 +398,7 @@ suite('unknown install state: details panel', () => {
     } as unknown as ScopeService;
     const catalog = {
       state: (): CatalogState => ({ items: [searchItem()], syncedAt: Date.now() }),
+      warm: async (): Promise<void> => {},
     } as unknown as CatalogService;
     const output = vscode.window.createOutputChannel('grimoire-details-test');
     disposables.push(output);
@@ -455,6 +456,7 @@ suite('unknown install state: details panel', () => {
     } as unknown as ScopeService;
     const catalog = {
       state: (): CatalogState => ({ items: [searchItem()], syncedAt: Date.now() }),
+      warm: async (): Promise<void> => {},
     } as unknown as CatalogService;
     const output = vscode.window.createOutputChannel('grimoire-details-test');
     disposables.push(output);
