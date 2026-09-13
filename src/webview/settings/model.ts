@@ -160,25 +160,20 @@ export function buildRegistryRow(entry: WireRegistryEntry): SettingsRegistryVM {
   };
 }
 
-/** Fixed group order + membership (design item 2: "Options" / "TUI"). A future
- *  key not in this table still renders — it falls into "Options" rather than
- *  being dropped (frozen/additive tolerance). */
+/** Fixed group order (design item 2: "Options" / "TUI"). Membership follows
+ *  the key itself — `options.tui.*` is the `[options.tui]` sub-table grim's
+ *  config file spells — so a TUI key grim adds later lands in the right panel
+ *  without a table edit here (frozen/additive tolerance: `sort` and
+ *  `sort_order` fell into "Options" under a hardcoded membership table). */
 const GROUP_ORDER = ['Options', 'TUI'] as const;
-const GROUP_OF: Record<string, (typeof GROUP_ORDER)[number]> = {
-  default_registry: 'Options',
-  clients: 'Options',
-  show_deprecated: 'Options',
-  default_view: 'TUI',
-  group_by_type: 'TUI',
-  tree_separators: 'TUI',
-  expand_levels: 'TUI',
-};
+const groupOf = (key: string): (typeof GROUP_ORDER)[number] =>
+  key.startsWith('options.tui.') ? 'TUI' : 'Options';
 
 /** `config list --all` emits one row per registry per field
  *  (`registry.<alias>.oci`, `.include`, …) alongside the fixed `options.*`
  *  keys. Those belong to the Registries table, which reads them from
- *  `registry list` instead — left in, `shortKey` would strip the prefix and
- *  drop every one of them into "Options" as an unlabelled duplicate. Worse for
+ *  `registry list` instead — left in, every one of them would land in
+ *  "Options" as an unlabelled duplicate. Worse for
  *  the two filter lists: their wire type is `string-list`, so renderControl
  *  would hand them the comma-joining chip editor, and editing one there splits
  *  `{tools,libs}/**` into two fragments that no longer compile. */
@@ -188,11 +183,11 @@ export function buildGroups(entries: WireConfigEntry[]): SettingsGroupVM[] {
     if (entry.key.startsWith('registry.')) {
       continue;
     }
-    const title = GROUP_OF[shortKey(entry.key)] ?? 'Options';
+    const title = groupOf(entry.key);
     byTitle.set(title, [...(byTitle.get(title) ?? []), buildSettingsRow(entry)]);
   }
   // Empty panels are omitted (CLAUDE.md convention) — a group with no rows
-  // (only possible with a partial/test fixture; real grim always returns all 7).
+  // (only possible with a partial/test fixture; real grim always returns every fixed key).
   return GROUP_ORDER.filter((title) => byTitle.has(title)).map((title) => ({
     title,
     rows: byTitle.get(title) ?? [],

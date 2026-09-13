@@ -150,14 +150,14 @@ suite('defaultHint', () => {
   });
 
   test('a concrete default renders "Default: <value>"', () => {
-    assert.strictEqual(defaultHint('options.expand_levels', '1'), 'Default: 1');
-    assert.strictEqual(defaultHint('options.group_by_type', 'false'), 'Default: false');
-    assert.strictEqual(defaultHint('options.default_view', 'tree'), 'Default: tree');
+    assert.strictEqual(defaultHint('options.tui.expand_levels', '1'), 'Default: 1');
+    assert.strictEqual(defaultHint('options.tui.group_by_type', 'false'), 'Default: false');
+    assert.strictEqual(defaultHint('options.tui.default_view', 'tree'), 'Default: tree');
   });
 });
 
 suite('buildGroups', () => {
-  test('groups the 7 fixed keys into Options (3) / TUI (4), stable order, no empty groups', () => {
+  test('groups the 9 fixed keys into Options (3) / TUI (6), stable order, no empty groups', () => {
     const groups = buildGroups(wireConfigEntries());
     assert.deepStrictEqual(
       groups.map((g) => g.title),
@@ -170,11 +170,23 @@ suite('buildGroups', () => {
     assert.deepStrictEqual(
       groups[1]?.rows.map((r) => r.key),
       [
-        'options.default_view',
-        'options.group_by_type',
-        'options.tree_separators',
-        'options.expand_levels',
+        'options.tui.default_view',
+        'options.tui.group_by_type',
+        'options.tui.tree_separators',
+        'options.tui.expand_levels',
+        'options.tui.sort',
+        'options.tui.sort_order',
       ],
+    );
+  });
+
+  test('membership follows the `options.tui.` prefix, not a fixed key list', () => {
+    // grim's `[options.tui]` sub-table grows additively; a hardcoded table
+    // dropped `sort` and `sort_order` into Options when they shipped.
+    const groups = buildGroups([wireConfigEntry({ key: 'options.tui.future_knob' })]);
+    assert.deepStrictEqual(
+      groups.map((g) => g.title),
+      ['TUI'],
     );
   });
 
@@ -195,7 +207,7 @@ suite('buildGroups', () => {
     // filter rows would get the COMMA-JOINING chip editor, which splits
     // `{tools,libs}/**` into two fragments that no longer compile.
     const groups = buildGroups([
-      wireConfigEntry({ key: 'options.expand_levels' }),
+      wireConfigEntry({ key: 'options.tui.expand_levels' }),
       wireConfigEntry({ key: 'registry.acme.oci' }),
       wireConfigEntry({ key: 'registry.acme.default' }),
       wireConfigEntry({ key: 'registry.acme.include', type: 'string-list' }),
@@ -203,7 +215,7 @@ suite('buildGroups', () => {
     ]);
     assert.deepStrictEqual(
       groups.flatMap((g) => g.rows.map((r) => r.key)),
-      ['options.expand_levels'],
+      ['options.tui.expand_levels'],
     );
   });
 });

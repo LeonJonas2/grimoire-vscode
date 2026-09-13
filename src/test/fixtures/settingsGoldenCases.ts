@@ -43,13 +43,13 @@ export function settingsGoldenCases(r: typeof render): GoldenCase[] {
   if (clients) {
     clients.status = 'saving';
   }
-  const treeSeparators = byKey.get('options.tree_separators');
+  const treeSeparators = byKey.get('options.tui.tree_separators');
   if (treeSeparators) {
     treeSeparators.status = 'error';
     treeSeparators.errorMessage =
       'Rejected by grim: separator must be a single character — "--" was not applied. Restored last saved value.';
   }
-  const expandLevels = byKey.get('options.expand_levels');
+  const expandLevels = byKey.get('options.tui.expand_levels');
   if (expandLevels) {
     expandLevels.status = 'reloaded';
   }

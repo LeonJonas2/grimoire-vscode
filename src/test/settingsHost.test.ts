@@ -375,7 +375,7 @@ suite('settings host integration', () => {
     canned(stub.dir, 'registry-list', { items: [] });
     canned(stub.dir, 'config-set', {
       action: 'set',
-      key: 'options.expand_levels',
+      key: 'options.tui.expand_levels',
       value: '2',
       scope: 'global',
     });
@@ -443,7 +443,7 @@ suite('settings host integration', () => {
     await send(api, panel, {
       type: 'setValue',
       scope: 'global',
-      key: 'options.expand_levels',
+      key: 'options.tui.expand_levels',
       value: '2',
     });
     const writeResult = posts[posts.length - 1];
@@ -862,7 +862,7 @@ suite('settings host integration', () => {
       await manager.onMessage(panel, {
         type: 'setValue',
         scope: 'global',
-        key: 'options.expand_levels',
+        key: 'options.tui.expand_levels',
         value: '2',
       });
       fs.rmSync(path.join(stub.dir, 'slow-touch'), { force: true });

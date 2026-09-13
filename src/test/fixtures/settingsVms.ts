@@ -1,6 +1,6 @@
 // View-model fixture builders for the Settings panel, mirroring vms.ts's role
 // for the sidebar/details goldens. Descriptions use the exact runtime copy
-// grim's next release ships for the 7 fixed `options.*` keys, not a
+// grim's next release ships for the 9 fixed `options.*` keys, not a
 // placeholder — a real string exercises the same markdown-it inline-render
 // path (backtick spans, etc.) production actually hits.
 import type {
@@ -12,7 +12,7 @@ import type { ScopesVM, SettingsRegistryFieldVM, SettingsState } from '../../web
 
 export function wireConfigEntry(overrides: Partial<WireConfigEntry> = {}): WireConfigEntry {
   return {
-    key: 'options.default_view',
+    key: 'options.tui.default_view',
     value: null,
     set: false,
     type: 'enum',
@@ -26,7 +26,7 @@ export function wireConfigEntry(overrides: Partial<WireConfigEntry> = {}): WireC
   };
 }
 
-/** The 7 fixed `options.*` keys grim returns, in stable order. */
+/** The 9 fixed `options.*` keys grim returns, in stable order. */
 export function wireConfigEntries(): WireConfigEntry[] {
   return [
     wireConfigEntry({
@@ -63,7 +63,7 @@ export function wireConfigEntries(): WireConfigEntry[] {
       values: null,
     }),
     wireConfigEntry({
-      key: 'options.default_view',
+      key: 'options.tui.default_view',
       value: null,
       set: false,
       type: 'enum',
@@ -74,7 +74,7 @@ export function wireConfigEntries(): WireConfigEntry[] {
       values: ['flat', 'tree'],
     }),
     wireConfigEntry({
-      key: 'options.group_by_type',
+      key: 'options.tui.group_by_type',
       value: 'false',
       set: false,
       type: 'boolean',
@@ -85,7 +85,7 @@ export function wireConfigEntries(): WireConfigEntry[] {
       values: null,
     }),
     wireConfigEntry({
-      key: 'options.tree_separators',
+      key: 'options.tui.tree_separators',
       value: '/',
       set: false,
       type: 'string-list',
@@ -99,7 +99,7 @@ export function wireConfigEntries(): WireConfigEntry[] {
       constraints: { item_pattern: '^[^\\s\\p{C}]$', item_width: 1 },
     }),
     wireConfigEntry({
-      key: 'options.expand_levels',
+      key: 'options.tui.expand_levels',
       value: '2',
       set: true,
       type: 'integer',
@@ -108,6 +108,30 @@ export function wireConfigEntries(): WireConfigEntry[] {
         'Sets how many levels of the grouped tree are expanded when the browser opens. Defaults to `1` (registry roots only); `0` expands the tree fully.',
       default: '1',
       values: null,
+    }),
+    wireConfigEntry({
+      key: 'options.tui.sort',
+      value: null,
+      set: false,
+      type: 'enum',
+      title: 'Sort',
+      description:
+        'Sets the order the browser opens in: `name`, `updated`, `rating` or `downloads`, the same orders `grim search --sort` applies. Unset, the browser groups by kind and then by name. Overridden by the `--sort` flag when given.',
+      // Null on purpose: unset is the kind-then-name grouping, which no
+      // listed value spells — the one enum key with no fixed default.
+      default: null,
+      values: ['name', 'updated', 'rating', 'downloads'],
+    }),
+    wireConfigEntry({
+      key: 'options.tui.sort_order',
+      value: 'desc',
+      set: true,
+      type: 'enum',
+      title: 'Sort order',
+      description:
+        'Sets the direction the opening order runs in, `asc` or `desc`. Unset, each order runs its natural way: `name` ascending, every other order and the default grouping with the biggest or newest first.',
+      default: null,
+      values: ['asc', 'desc'],
     }),
   ];
 }
