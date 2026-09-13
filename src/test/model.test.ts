@@ -718,6 +718,7 @@ suite('filters', () => {
     name: string,
     updated: string | null,
     up: number | null,
+    pulls: number | null = null,
   ): CardVM => ({
     repo: `ghcr.io/acme/skills/${name}`,
     name,
@@ -731,6 +732,7 @@ suite('filters', () => {
     installs: [],
     updated,
     ...(up === null ? {} : { rating: { up, url: 'https://example.test/1', vote: 'unknown' as const } }),
+    ...(pulls === null ? {} : { downloads: { total: pulls, asOf: null, versions: [] } }),
   });
 
   test("relevance keeps grim's own order, and reverses it whole", () => {
@@ -785,12 +787,25 @@ suite('filters', () => {
     );
   });
 
+  test('uncounted rows are their own bucket, never zero pulls', () => {
+    const rows = [
+      sortCard('uncounted', '2026-01-01T00:00:00Z', null),
+      sortCard('zero', '2026-01-01T00:00:00Z', null, 0),
+      sortCard('popular', '2020-01-01T00:00:00Z', null, 1416),
+    ];
+    assert.deepStrictEqual(
+      sortCards(rows, 'downloads', 'desc').map((c) => c.name),
+      ['popular', 'zero', 'uncounted'],
+      'a measured 0 still outranks an unknown — that is why the count is nullable',
+    );
+  });
+
   test('every mode is total — no pair compares equal', () => {
     // Two rows identical in every ranked key: the ref tiebreak has to decide,
     // or the order reshuffles on repaint.
     const rows = [sortCard('same', '2026-01-01T00:00:00Z', 3), sortCard('same', '2026-01-01T00:00:00Z', 3)];
     rows[1]!.repo = 'ghcr.io/other/skills/same';
-    for (const mode of ['name', 'updated', 'rating'] as const) {
+    for (const mode of ['name', 'updated', 'rating', 'downloads'] as const) {
       const forward = sortCards(rows, mode, NATURAL[mode]).map((c) => c.repo);
       const back = sortCards(rows, mode, NATURAL[mode] === 'asc' ? 'desc' : 'asc').map((c) => c.repo);
       assert.deepStrictEqual(back, [...forward].reverse(), `${mode} reverses whole`);

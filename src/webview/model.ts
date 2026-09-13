@@ -777,11 +777,13 @@ export const DEFAULT_INSTALLED_FILTER: CardFilter = {
  * registry-declaration order for an unqueried one — and it is Browse's default
  * for exactly that reason: sorting a typed query by name buries the best match.
  * It is offered on BROWSE ONLY; `grim status` ranks nothing, so Installed lists
- * name-first instead (see the sidebar's own filter seed). The other three
- * mirror grim's `--sort` (`browse_sort.rs`) and the index site's control,
- * bucket rules included.
+ * name-first instead (see the sidebar's own filter seed). `name`, `updated`
+ * and `rating` mirror grim's `--sort` (`browse_sort.rs`) and the index site's
+ * control, bucket rules included. `downloads` follows the same bucket rules
+ * but has no `--sort` counterpart in grim yet — the ordering is applied here,
+ * over rows grim already handed us, so nothing depends on that.
  */
-export type SortMode = 'relevance' | 'name' | 'updated' | 'rating';
+export type SortMode = 'relevance' | 'name' | 'updated' | 'rating' | 'downloads';
 export type SortDir = 'asc' | 'desc';
 
 /** Each field's own direction — the one a reader means when they pick it.
@@ -793,6 +795,7 @@ export const NATURAL: Record<SortMode, SortDir> = {
   name: 'asc',
   updated: 'desc',
   rating: 'desc',
+  downloads: 'desc',
 };
 
 /** Bigger first, with `null` as its own bucket UNDER every number: missing is
@@ -817,6 +820,11 @@ const byName = (a: CardVM, b: CardVM): number =>
 const byUpdated = (a: CardVM, b: CardVM): number => descending(updatedAt(a), updatedAt(b));
 const byRating = (a: CardVM, b: CardVM): number =>
   descending(a.rating?.up ?? null, b.rating?.up ?? null);
+/** Uncounted sorts into the null bucket, NOT as zero pulls — and a genuine
+ *  `total: 0` sorts as the number it is, below every positive count and above
+ *  every unknown. That distinction is the whole reason the count is nullable. */
+const byDownloads = (a: CardVM, b: CardVM): number =>
+  descending(a.downloads?.total ?? null, b.downloads?.total ?? null);
 
 /** Each mode as a chain of keys, most significant first. Every chain ends on a
  *  key that is unique per row (the ref, through {@link byName}), so no two
@@ -827,6 +835,7 @@ const CHAINS: Record<SortMode, ReadonlyArray<(a: CardVM, b: CardVM) => number>> 
   name: [byName],
   updated: [byUpdated, byName],
   rating: [byRating, byUpdated, byName],
+  downloads: [byDownloads, byUpdated, byName],
 };
 
 /** Orders cards for the sort control. `'relevance'` keeps grim's order as it

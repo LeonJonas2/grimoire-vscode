@@ -909,6 +909,7 @@ const SORT_OPTIONS: ReadonlyArray<{ id: SortMode; label: string }> = [
   { id: 'name', label: 'name' },
   { id: 'updated', label: 'updated' },
   { id: 'rating', label: 'rating' },
+  { id: 'downloads', label: 'downloads' },
 ];
 
 /** Lucide's arrow-up-narrow-wide / arrow-down-wide-narrow, inlined: the index

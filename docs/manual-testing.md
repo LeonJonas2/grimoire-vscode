@@ -211,6 +211,9 @@ What to look at:
 | the panel's placement | It is its **own** panel, not a row inside RATING. Check it on an unrated-but-counted row (`support-desk`): RATING omits itself entirely there, and the count must survive that. |
 | `rust-style` / `support-desk` | No breakdown published — the total stands alone. |
 
+The sort control gains a **downloads** entry beside `rating`. Uncounted rows
+bucket at the end — under the measured `0`, never merged with it.
+
 The card glyph is lucide's arrow-down-to-line, the same mark the index site
 puts on its download counts, so one signal reads identically on both surfaces.
 
