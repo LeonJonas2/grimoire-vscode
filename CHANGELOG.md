@@ -5,6 +5,20 @@ All notable changes to the Grimoire VS Code extension.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-09-13
+
+### Added
+
+- Show the index's download count *(browse)*
+- Sort by download count *(browse)*
+
+### Fixed
+
+- Group TUI keys by the options.tui. prefix *(settings)*
+- Keep the rating and pull count across a sidebar search *(details)*
+- Read the row that actually carries the sidecar signals *(details)*
+- Show the sidecar signals without a sidebar refresh *(details)*
+
 ## [0.3.5] - 2026-09-01
 
 ### Fixed
@@ -251,6 +265,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename extension to grimoire-vscode
 - Display name 'Grimoire Marketplace'
 
+[0.3.6]: https://github.com/grimoire-rs/grimoire-vscode/compare/v0.3.5..v0.3.6
 [0.3.5]: https://github.com/grimoire-rs/grimoire-vscode/compare/v0.3.4..v0.3.5
 [0.3.4]: https://github.com/grimoire-rs/grimoire-vscode/compare/v0.3.3..v0.3.4
 [0.3.3]: https://github.com/grimoire-rs/grimoire-vscode/compare/v0.3.2..v0.3.3
