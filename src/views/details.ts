@@ -18,6 +18,7 @@ import {
   type DigestResult,
   type FetchResult,
   type Scope,
+  type SearchItem,
 } from '../grim';
 import {
   CACHE_VERSION,
@@ -208,6 +209,39 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
    */
   private readonly votes = new Map<string, { vote: VoteState; up: number | null }>();
 
+  /**
+   * The catalog row each open panel was built from.
+   *
+   * `CatalogService.state().items` is a cache the SIDEBAR owns and replaces
+   * wholesale on every search — a keystroke that narrows the browse, a
+   * `ready` refresh after the view was hidden, or a cold window painting
+   * restored cards before any search has run all leave it without a row this
+   * panel is still showing. Every VM rebuild re-resolved the row from there,
+   * so the row's index-published signals (the rating, the pull count) blinked
+   * out on the second paint while the card that opened the panel — built once,
+   * from the row — kept showing them.
+   *
+   * Remembered per repo and refreshed whenever the shared cache still has it,
+   * so a genuinely updated row still wins and only its disappearance is
+   * absorbed.
+   *
+   * ponytail: unbounded map, one small row per artifact opened in a session.
+   * Give it the panel lifecycle if a session ever opens enough to matter.
+   */
+  private readonly rows = new Map<string, SearchItem>();
+
+  /**
+   * The catalog row for `repo`, sticky across the sidebar replacing its cache.
+   * See {@link rows}.
+   */
+  private searchRow(repo: string): SearchItem | null {
+    const live = this.catalog.state().items.find((i) => i.repo === repo);
+    if (live) {
+      this.rows.set(repo, live);
+    }
+    return live ?? this.rows.get(repo) ?? null;
+  }
+
   /** Repos the silent `viewer_up` refinement has already been attempted for.
    *  Separate from {@link votes} because a refinement that answered *unknown*
    *  stores nothing there — without this it would re-run on every repaint. */
@@ -334,7 +368,7 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
   /** "Kind: name" from the catalog search item; the repo tail when it misses.
    *  The preview slot appends " (Preview)" — see {@link tabTitle}. */
   private titleFor(repo: string, preview: boolean): string {
-    const item = this.catalog.state().items.find((i) => i.repo === repo);
+    const item = this.searchRow(repo);
     const kind = normalizeKind(item?.kind ?? null);
     const base = kind ? `${KIND_LABELS[kind] ?? kind}: ${artifactName(repo)}` : artifactName(repo);
     return tabTitle(base, preview);
@@ -463,7 +497,7 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
    *  server-side skeleton ({@link renderHtml}) and the on-ready post
    *  ({@link postSkeleton}) so both render identically. */
   private skeletonVM(repo: string): DetailsVM {
-    const searchItem = this.catalog.state().items.find((i) => i.repo === repo) ?? null;
+    const searchItem = this.searchRow(repo);
     const cached = this.scopes.cachedSnapshot();
     const folder = this.scopes.projectFolder();
     const scopes: ScopesVM = {
@@ -743,7 +777,7 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
       return;
     }
     // Unrated rows have no thread to ask about; skip before spawning grim.
-    if (!this.catalog.state().items.find((i) => i.repo === repo)?.rating) {
+    if (!this.searchRow(repo)?.rating) {
       return;
     }
     this.refined.add(repo);
@@ -1037,7 +1071,7 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
     fetchValue: FetchResult | null,
     docs: CompanionDocs,
   ): DetailsVM {
-    const searchItem = this.catalog.state().items.find((i) => i.repo === repo) ?? null;
+    const searchItem = this.searchRow(repo);
     const { installs, unknown } = installState(repo, scopeStatuses(snapshot));
     const projectName = snapshot.projectFolder?.split(/[\\/]/).pop() ?? null;
     const vm = buildDetailsVM({
