@@ -9,3 +9,4 @@ handoff.zip
 .serena/
 TODO.md
 .claude/state/
+.claude/hooks/.state/
