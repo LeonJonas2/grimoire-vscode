@@ -40,6 +40,7 @@ import {
   isOpenableUrl,
   isValidRepo,
   contactUrl,
+  readDownloads,
   readSupport,
   normalizeKind,
   parseAddRegistryLink,
@@ -2696,6 +2697,93 @@ suite('view options', () => {
     const items = buildCards([searchItem()], [installedScope('global')]);
     const state = sidebarState({ mode: 'installed', items });
     assert.strictEqual(installedCards(state, DEFAULT_FILTER).length, 1);
+  });
+});
+
+suite('download counts', () => {
+  test('a counted row carries the total and the stamp it was read at', () => {
+    assert.deepStrictEqual(readDownloads({ total: 1416, as_of: '2026-09-10T21:48:47Z' }), {
+      total: 1416,
+      asOf: '2026-09-10T21:48:47Z',
+      versions: [],
+    });
+  });
+
+  test('zero is a measurement and survives — only absence reads as unknown', () => {
+    // grim publishes "unknown" as null, so a 0 that reaches here means the
+    // producer counted this artifact and nobody has pulled it. Collapsing it
+    // to null would report unknown for something that is known.
+    assert.deepStrictEqual(readDownloads({ total: 0, as_of: null }), {
+      total: 0,
+      asOf: null,
+      versions: [],
+    });
+  });
+
+  test('absent, null and malformed all read as uncounted, and none of them raises', () => {
+    for (const raw of [
+      undefined,
+      null,
+      {},
+      { total: -1 },
+      { total: 1.5 },
+      { total: Number.NaN },
+      { total: Number.POSITIVE_INFINITY },
+      { total: '9' },
+    ] as WireSearchItem['downloads'][]) {
+      assert.strictEqual(readDownloads(raw), null, `accepted ${JSON.stringify(raw)}`);
+    }
+  });
+
+  test("per-release counts keep grim's order and drop only malformed entries", () => {
+    const parsed = readDownloads({
+      total: 1416,
+      as_of: null,
+      versions: [
+        { version: '1.10.0', total: 900 },
+        { version: '', total: 5 },
+        { version: '1.9.0', total: 400 },
+        { version: '1.8.0', total: -1 },
+        { version: '1.7.0', total: 1.5 },
+      ] as never,
+    });
+    // Order is grim's — highest release first — and is never re-derived here:
+    // 1.10.0 before 1.9.0 is exactly what a string sort would get backwards.
+    assert.deepStrictEqual(parsed?.versions, [
+      { version: '1.10.0', total: 900 },
+      { version: '1.9.0', total: 400 },
+    ]);
+    assert.strictEqual(parsed?.total, 1416, 'a bad entry never disqualifies the total');
+  });
+
+  test('absent or malformed versions read as no breakdown, never as an error', () => {
+    for (const raw of [
+      { total: 9 },
+      { total: 9, versions: null },
+      { total: 9, versions: 'nope' },
+    ] as never[]) {
+      assert.deepStrictEqual(readDownloads(raw)?.versions, [], JSON.stringify(raw));
+    }
+  });
+
+  test('a missing or empty stamp leaves the count usable, just undated', () => {
+    assert.deepStrictEqual(readDownloads({ total: 7 }), { total: 7, asOf: null, versions: [] });
+    assert.deepStrictEqual(readDownloads({ total: 7, as_of: '' }), {
+      total: 7,
+      asOf: null,
+      versions: [],
+    });
+  });
+
+  test('a card carries the count; a grim that predates the field reads uncounted', () => {
+    const cards = buildCards([searchItem({ downloads: { total: 42, as_of: null } })], []);
+    assert.strictEqual(cards[0]?.downloads?.total, 42);
+    assert.strictEqual(buildCards([searchItem()], [])[0]?.downloads, null);
+  });
+
+  test('the two sidecar signals are independent — counted does not imply rated', () => {
+    const cards = buildCards([searchItem({ downloads: { total: 42, as_of: null } })], []);
+    assert.strictEqual(cards[0]?.rating, null, 'a counted card is unrated, never zero-rated');
   });
 });
 

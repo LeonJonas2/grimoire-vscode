@@ -38,6 +38,18 @@ body {
   color: var(--vscode-descriptionForeground);
 }
 
+/* Download figures line up as a column: tabular figures so a three-digit count
+   does not shift the digits above it, right-aligned inside a fixed box so the
+   magnitudes compare at a glance rather than by reading. A box beside the
+   label, not the rail's far edge — that would strand the figure 150px from
+   what it counts. 7ch fits a six-digit total with its separator. */
+.dl-count {
+  display: inline-block;
+  min-width: 7ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Kind tints (design 1a/1g). */
 .kind-skill {
   --kind-tint: var(--vscode-charts-blue, #3794ff);

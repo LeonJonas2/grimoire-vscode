@@ -174,6 +174,50 @@ it): launch with `GRIM_HOME` pointing at a path that does not exist, or stop the
 registries with `docker compose -f test/manual/docker-compose.yml down` and hit
 Refresh.
 
+## Ratings and download counts
+
+> **Launch via a rig config, not a normal window.** Both signals need a `grim`
+> new enough to emit them *and* this working copy's extension. A normal VS Code
+> window gives you neither: it runs the **installed** extension from the
+> marketplace and the `grim` on your own `PATH`. Only the
+> "Run Extension (manual rig — …)" configs put `../grimoire/test/bin` first on
+> `PATH`, and only the Extension Development Host shadows the installed build.
+> If the rows appear but carry no badge, check `grim --version` inside the
+> debug host against the rig's binary — a `grim` that predates the field simply
+> omits the key, and every row reads as uncounted with no error anywhere.
+
+Both come from the index's `stats.json` sidecar, and the sidecar rides the
+**HTTP index transport only** — an OCI `_catalog` browse has none to fetch. The
+rig serves one from the `index` compose service on port 5052 (`grimoire`'s
+`test/manual/index/`), declared in `project/grimoire.toml` and in the rig's
+global config, so both signals are reachable in review. Before that service
+existed every row in the rig was permanently unrated and uncounted.
+
+Because the index lists the **same refs** the OCI registry serves, the browse
+shows a second tree root carrying the same artifacts. That is real grim
+behaviour — one repository served by two configured registries appears once per
+registry — not a rig artefact.
+
+What to look at:
+
+| Row | Expect |
+|---|---|
+| `code-reviewer` | Rating badge **and** download badge on the card. In the rail, a **DOWNLOADS** panel: `Total 1,416`, the displayed release `1.2.0` under it. `1.1.0`/`1.0.0` are not listed, and no "as of" date — the stamp lives in the card badge's tooltip only. The total is not the displayed release's figure, and must not be shown as if it were. |
+| `support-desk` | Counted, unrated — `250K` on the badge, the exact figure in its tooltip. |
+| `commit-helper` | Rated, **uncounted**: no download badge, and no `Downloads` row in the rail. Absence is unknown, not zero. |
+| `reviewer` | A measured **zero**: the badge renders `0`. It must not look like the row above. |
+| `rust-style` | A count with no stamp — the badge tooltip shows the bare figure. |
+| `security-baseline` | A stamp three months old in the badge tooltip. |
+| the panel's placement | It is its **own** panel, not a row inside RATING. Check it on an unrated-but-counted row (`support-desk`): RATING omits itself entirely there, and the count must survive that. |
+| `rust-style` / `support-desk` | No breakdown published — the total stands alone. |
+
+The card glyph is lucide's arrow-down-to-line, the same mark the index site
+puts on its download counts, so one signal reads identically on both surfaces.
+
+`test/manual/index/README.md` in the `grimoire` checkout gives the row-by-row
+rationale, and the fixture is served straight off disk: edit `stats.json`, hit
+Refresh, no restart.
+
 ## Curated annotations and support channels
 
 The rig's `support-desk` skill is the annotation showcase: it publishes every

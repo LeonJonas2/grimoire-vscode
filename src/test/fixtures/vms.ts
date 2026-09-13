@@ -104,6 +104,7 @@ export function detailsVM(overrides: Partial<DetailsVM> = {}): DetailsVM {
     keywords: ['cli', 'oci'],
     logoUri: null,
     rating: null,
+    downloads: null,
     busy: null,
     error: null,
     ...overrides,

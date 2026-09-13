@@ -38,6 +38,32 @@ export interface SearchRating {
   url: string;
 }
 
+/** The pull count `grim search` carries on a row, when the browse source
+ *  published one. ABSENT/null means *unknown* — never a zero-pull record: only
+ *  a registry exposing a per-artifact download counter can produce one at all,
+ *  and neither GHCR nor the GitLab registry does, so null is the common case.
+ *
+ *  An OBJECT, not a bare number: the sidecar stamps every count with the time
+ *  the producer read it, and grim's contract keeps room for the per-release
+ *  breakdown it also publishes. `as_of` is null when the sidecar carried no
+ *  stamp. */
+export interface SearchDownloads {
+  total: number;
+  as_of: string | null;
+  /** Per-release counts, **highest release first** — grim orders them, so no
+   *  consumer compares tags. `[]` when the producer published no breakdown,
+   *  which is its own answer rather than a zero. Absent on a grim that
+   *  predates the field. */
+  versions?: SearchDownloadVersion[];
+}
+
+/** One release's share of a row's pull count. A floating tag (`latest`,
+ *  `1.35`) never appears — it aliases a release already counted. */
+export interface SearchDownloadVersion {
+  version: string;
+  total: number;
+}
+
 export interface SearchItem {
   kind: string | null;
   repo: string;
@@ -54,6 +80,10 @@ export interface SearchItem {
   /** Optional AND nullable: a grim that predates the field omits the key, and a
    *  present-but-null value is grim's "unrated". Both read as unrated. */
   rating?: SearchRating | null;
+  /** Optional AND nullable, for the same reason `rating` is: a grim that
+   *  predates the field omits the key, a present-but-null value is grim's
+   *  "unknown". Both read as uncounted. */
+  downloads?: SearchDownloads | null;
   status: string;
 }
 

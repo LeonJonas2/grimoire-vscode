@@ -163,6 +163,109 @@ suite('escaping', () => {
   });
 });
 
+suite('download counts', () => {
+  test('a counted card shows a compact badge and the exact figure in its tooltip', async () => {
+    const html = await litHtml(
+      renderCard(card({ downloads: { total: 1416, asOf: '2026-09-10T21:48:47Z', versions: [] } })),
+    );
+    assert.ok(html.includes('downloads-badge'), 'badge rendered');
+    // Lucide's arrow-down-to-line, the index site's own glyph — matched by its
+    // distinctive baseline path so a codicon swap cannot pass this silently.
+    assert.ok(html.includes('M19 21H5'), 'lucide arrow-down-to-line, not a codicon');
+    assert.ok(!html.includes('codicon-cloud-download'), 'no codicon fallback left behind');
+    assert.ok(html.includes('1.4K'), `compact figure on the badge: ${html}`);
+    assert.ok(html.includes('1,416'), 'exact figure survives in the tooltip');
+    assert.ok(html.includes('as of'), 'the tooltip dates the count');
+  });
+
+  test('an uncounted card renders no badge — absent is unknown, never zero', async () => {
+    const html = await litHtml(renderCard(card()));
+    assert.ok(!html.includes('downloads-badge'), 'no badge without a count');
+    assert.ok(!html.includes('codicon-cloud-download'));
+  });
+
+  test('a zero count still renders — the producer measured it', async () => {
+    const html = await litHtml(
+      renderCard(card({ downloads: { total: 0, asOf: null, versions: [] } })),
+    );
+    assert.ok(html.includes('downloads-badge'), 'zero is a measurement, not an absence');
+  });
+
+  test('the rail panel survives an unrated artifact — the two signals are independent', async () => {
+    // Its own panel, not a row inside RATING: renderRatingPanel omits itself
+    // entirely on an unrated row, which would take a counted-but-unrated
+    // artifact's figure down with it.
+    const html = await litHtml(
+      renderDetails(
+        detailsVM({
+          rating: null,
+          downloads: { total: 1416, asOf: '2026-09-10T21:48:47Z', versions: [] },
+        }),
+      ),
+    );
+    assert.ok(html.includes('DOWNLOADS'), 'the panel is present without a rating');
+    assert.ok(html.includes('1,416'), 'the rail shows the exact figure, never the rounded one');
+    assert.ok(!html.includes('as of'), 'the stamp stays in the badge tooltip, off the rail');
+  });
+
+  test('the displayed release stands beside the total; the rest of the breakdown is not shown', async () => {
+    const html = await litHtml(
+      renderDetails(
+        detailsVM({
+          latestVersion: '1.2.0',
+          downloads: {
+            total: 1416,
+            asOf: null,
+            versions: [
+              { version: '1.2.0', total: 900 },
+              { version: '1.1.0', total: 400 },
+              { version: '1.0.0', total: 100 },
+            ],
+          },
+        }),
+      ),
+    );
+    assert.ok(html.includes('1,416') && html.includes('900'), 'total and the displayed release');
+    assert.ok(!html.includes('400') && !html.includes('1.0.0'), 'older releases stay out of the rail');
+  });
+
+  test('a row with no displayed version leads with the highest release', async () => {
+    // The index-backed case: an index is a phone book and carries no version
+    // data, so nothing matches `latestVersion` and grim orders the breakdown
+    // highest first.
+    const html = await litHtml(
+      renderDetails(
+        detailsVM({
+          latestVersion: null,
+          downloads: {
+            total: 1416,
+            asOf: null,
+            versions: [
+              { version: '1.2.0', total: 900 },
+              { version: '1.1.0', total: 400 },
+            ],
+          },
+        }),
+      ),
+    );
+    assert.ok(html.includes('1.2.0') && html.includes('900'), 'the highest release leads');
+    assert.ok(!html.includes('1.1.0'), 'the older one is not shown');
+  });
+
+  test('no breakdown renders the total alone', async () => {
+    const html = await litHtml(
+      renderDetails(detailsVM({ downloads: { total: 12, asOf: null, versions: [] } })),
+    );
+    assert.ok(html.includes('DOWNLOADS') && html.includes('12'));
+    assert.strictEqual(html.split('dl-count').length - 1, 1, 'the total is the only figure');
+  });
+
+  test('an uncounted artifact renders no DOWNLOADS panel rather than an empty one', async () => {
+    const html = await litHtml(renderDetails(detailsVM({ downloads: null })));
+    assert.ok(!html.includes('DOWNLOADS'), 'uncounted is the common case; an empty panel is noise');
+  });
+});
+
 suite('card rendering', () => {
   test('codicon per kind', () => {
     assert.strictEqual(kindIcon('skill'), 'sparkle');

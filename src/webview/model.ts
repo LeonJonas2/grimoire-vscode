@@ -7,6 +7,8 @@ import type {
   CardSource,
   CardVM,
   DetailsVM,
+  DownloadsVM,
+  DownloadVersionVM,
   InstallVM,
   GroupKey,
   RatingVM,
@@ -40,6 +42,14 @@ export interface WireSearchItem {
   /** grim's per-row rating. Optional for the same reason `source` is: a grim
    *  without the field omits the key, and grim's own "unrated" is a null. */
   rating?: { up: number; url: string } | null;
+  /** grim's per-row pull count. Optional AND nullable like `rating`: an older
+   *  grim omits the key, and grim's own "unknown" is a null. Both read as
+   *  uncounted — never as zero pulls. */
+  downloads?: {
+    total: number;
+    as_of?: string | null;
+    versions?: Array<{ version: string; total: number }> | null;
+  } | null;
   status: string;
 }
 
@@ -476,6 +486,7 @@ export function buildCards(
       ...(source ? { source } : {}),
       privateRegistry: isPrivateRegistry(registryHost(item.repo), authed, defaultRegistryHost),
       rating: readRating(item.rating),
+      downloads: readDownloads(item.downloads),
       updated: item.created,
     });
   }
@@ -552,6 +563,45 @@ export function readSupport(raw: WireSupport | undefined): SupportVM {
     contact: raw?.contact ?? null,
     security: raw?.security ?? null,
   };
+}
+
+/**
+ * A wire pull count, read defensively into a {@link DownloadsVM}. Null for
+ * every shape that is not a usable count — absent key (older grim), explicit
+ * null (grim's "unknown"), a non-finite, negative or non-integer total.
+ * Uncounted is a first-class outcome at each level and never an error.
+ *
+ * Zero is KEPT, and that is the one asymmetry with {@link readRating}: grim
+ * publishes absence as null, so a `total` of 0 that reaches here is a real
+ * measurement — the producer counted this artifact and nobody has pulled it.
+ * Collapsing it to null would report "unknown" for something that is known.
+ *
+ * `as_of` is carried through only when it is a non-empty string; anything
+ * else reads as an unstamped count rather than disqualifying the figure. Same
+ * posture for `versions`: a malformed entry is dropped, an absent or malformed
+ * list reads as no breakdown, and neither disqualifies the total. Order is
+ * grim's — highest release first — and is preserved, never re-derived.
+ */
+export function readDownloads(raw: WireSearchItem['downloads']): DownloadsVM | null {
+  if (!raw || typeof raw.total !== 'number') {
+    return null;
+  }
+  if (!Number.isFinite(raw.total) || !Number.isInteger(raw.total) || raw.total < 0) {
+    return null;
+  }
+  const asOf = typeof raw.as_of === 'string' && raw.as_of !== '' ? raw.as_of : null;
+  const versions: DownloadVersionVM[] = Array.isArray(raw.versions)
+    ? raw.versions.filter(
+        (v): v is DownloadVersionVM =>
+          !!v &&
+          typeof v.version === 'string' &&
+          v.version !== '' &&
+          typeof v.total === 'number' &&
+          Number.isInteger(v.total) &&
+          v.total >= 0,
+      )
+    : [];
+  return { total: raw.total, asOf, versions };
 }
 
 export function readRating(raw: WireSearchItem['rating']): RatingVM | null {
@@ -1948,6 +1998,7 @@ export function buildSkeletonVM(
     keywords: null,
     logoUri: null,
     rating: readRating(searchItem?.rating),
+    downloads: readDownloads(searchItem?.downloads),
     busy: null,
     error: null,
     loading: true,
@@ -2075,9 +2126,11 @@ export function buildDetailsVM(sources: DetailsSources): DetailsVM {
     support: readSupport(describe?.support),
     keywords: describe?.keywords ?? frontmatter?.keywords ?? null,
     logoUri: sources.logoUri,
-    // Only `grim search` publishes a rating; describe/fetch carry none, so the
-    // catalog row is the single source and an absent row means unrated.
+    // Only `grim search` publishes a rating or a pull count; describe/fetch
+    // carry neither, so the catalog row is the single source and an absent row
+    // means unrated and uncounted.
     rating: readRating(searchItem?.rating),
+    downloads: readDownloads(searchItem?.downloads),
     busy: null,
     error: null,
   };

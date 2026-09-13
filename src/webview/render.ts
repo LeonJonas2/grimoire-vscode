@@ -19,6 +19,7 @@ import type {
   BundleMemberVM,
   CardVM,
   DetailsVM,
+  DownloadsVM,
   InstallVM,
   RatingVM,
   RevalidateState,
@@ -172,6 +173,68 @@ function ratingBadge(rating: RatingVM | null | undefined): TemplateResult | type
     return nothing;
   }
   return html`<span class="rating-badge" title="${rating.up} ${rating.up === 1 ? 'upvote' : 'upvotes'}"><span class="codicon codicon-arrow-up"></span>${rating.up}</span>`;
+}
+
+/** Lucide's arrow-down-to-line, inlined — the same glyph the index site puts
+ *  on its download counts, and the same reason the sort icons above are
+ *  inlined rather than picked from the codicon set: the two surfaces should
+ *  mark one signal identically, and the codicon `cloud-download` reads as a
+ *  fetch action rather than a tally. */
+const DOWNLOADS_ICON = html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>`;
+
+/** Compact pull counts for the card badge — `1416` reads `1.4K`. `Intl` does
+ *  the abbreviating; the exact figure stays in the tooltip and the rail, so
+ *  nothing is only ever available rounded. */
+const COMPACT = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 });
+
+/** The browse card / compact row download badge: the pull count and nothing
+ *  else, beside the rating badge. Omitted on an uncounted row — most registries
+ *  publish no counter, so this is absent far more often than present, and an
+ *  omitted badge is the difference between "unknown" and "nobody pulled it". */
+function downloadsBadge(downloads: DownloadsVM | null | undefined): TemplateResult | typeof nothing {
+  if (!downloads) {
+    return nothing;
+  }
+  const exact = downloads.total.toLocaleString();
+  const title = downloads.asOf
+    ? `${exact} ${downloads.total === 1 ? 'pull' : 'pulls'} as of ${formatDate(downloads.asOf)}`
+    : `${exact} ${downloads.total === 1 ? 'pull' : 'pulls'}`;
+  return html`<span class="downloads-badge" title="${title}">${DOWNLOADS_ICON}${COMPACT.format(downloads.total)}</span>`;
+}
+
+/** The DOWNLOADS rail panel — the index site's own panel, ported.
+ *
+ *  Its own panel rather than a row inside PACKAGE, and deliberately NOT inside
+ *  RATING: the two sidecar signals are independent, and RATING omits itself
+ *  entirely on an unrated artifact, which would take a counted-but-unrated
+ *  row's figure down with it.
+ *
+ *  Omitted whole on an uncounted row. That is the common case — only a
+ *  registry publishing a per-artifact counter can produce one at all — and an
+ *  empty panel is not a zero (this repo's "empty panels are omitted" rule).
+ *
+ *  The exact figure, never the compact one: the card badge rounds because a
+ *  card is a glance, and this is where a reader comes for the number.
+ */
+function renderDownloadsPanel(vm: DetailsVM): TemplateResult | typeof nothing {
+  const downloads = vm.downloads;
+  if (!downloads) {
+    return nothing;
+  }
+  // One release beside the total: the displayed one, which is what an untagged
+  // install resolves to and so the one per-release figure a reader came for.
+  // An INDEX-backed row has no displayed version at all — an index is a phone
+  // book and carries no version data — so lead with the highest release there.
+  // The rest of the breakdown is not shown: a package published often reaches
+  // dozens of releases, and the rail is a column beside the page, not the page.
+  const pinned = downloads.versions.find((v) => v.version === vm.latestVersion);
+  const lead = pinned ?? downloads.versions[0];
+  return html`
+<div class="rail-panel">
+  <div class="rail-title">DOWNLOADS</div>
+  ${railRow('Total', html`<span class="dl-count">${downloads.total.toLocaleString()}</span>`)}
+  ${lead ? railRow(lead.version, html`<span class="dl-count">${lead.total.toLocaleString()}</span>`) : nothing}
+</div>`;
 }
 
 /** The RATING rail panel. Omitted entirely on an unrated row — there is no
@@ -354,7 +417,7 @@ export function renderCard(card: CardVM, options: CardVariant = {}): TemplateRes
     body = html`${title}${description}
     <div class="card-meta">
       <span class="registry mono">${lock}${registryLabel(card.repo)}</span>
-      ${ratingBadge(card.rating)}
+      ${ratingBadge(card.rating)}${downloadsBadge(card.downloads)}
       <span class="card-actions">${options.installStateUnknown ? nothing : cardAction(card)}</span>
     </div>`;
   }
@@ -1671,6 +1734,7 @@ ${renderDeprecationBanner(vm)}
     ${renderInstallationPanel(vm)}
     ${renderContentsPanel(vm)}
     ${renderRatingPanel(vm)}
+    ${renderDownloadsPanel(vm)}
     ${renderPackagePanel(vm)}
     ${renderResourcesPanel(vm)}
     ${renderSupportPanel(vm)}

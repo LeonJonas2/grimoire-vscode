@@ -97,6 +97,25 @@ export interface RatingVM {
   vote: VoteState;
 }
 
+export interface DownloadsVM {
+  /** Aggregate pull count from the index sidecar. Never zero-for-absent: an
+   *  uncounted artifact has no {@link DownloadsVM} at all. */
+  total: number;
+  /** When the producer read the counter (ISO 8601), or null when the sidecar
+   *  published no stamp. Carried in the card badge's tooltip only — the rail
+   *  shows the bare figure. */
+  asOf: string | null;
+  /** Per-release counts, highest release first. Ordered by grim, so this is
+   *  rendered in arrival order and nothing here compares tags. Empty when the
+   *  producer published no breakdown — most do not. */
+  versions: DownloadVersionVM[];
+}
+
+export interface DownloadVersionVM {
+  version: string;
+  total: number;
+}
+
 export interface CardVM {
   repo: string;
   name: string;
@@ -125,6 +144,7 @@ export interface CardVM {
   /** Community rating from the browse row. Absent on a grim that predates the
    *  field and null on an unrated row — both render nothing. */
   rating?: RatingVM | null;
+  downloads?: DownloadsVM | null;
   /** Publish date (`grim search`'s `created`), for the `updated` sort only —
    *  nothing renders it. Null when the row carries none, which sorts into the
    *  undated bucket rather than to 1970. */
@@ -424,6 +444,7 @@ export interface DetailsVM {
   logoUri: string | null;
   /** Community rating; null when the row is unrated (no thread to vote on). */
   rating: RatingVM | null;
+  downloads: DownloadsVM | null;
   /** Host-stamped: the resolved grim is at least RATING_GRIM_VERSION, so the
    *  vote affordance may render. Absent/false hides the button and leaves the
    *  count — an older grim keeps every other feature (C-018). */

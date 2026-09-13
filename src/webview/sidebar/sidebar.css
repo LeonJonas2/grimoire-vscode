@@ -1270,3 +1270,25 @@ vscode-progress-bar {
 .rating-badge .codicon {
   font-size: 10px;
 }
+
+/* Pull count on a browse card, beside the rating badge. Same weight as the
+   rating: both are index-published signals, neither is an affordance. Absent
+   entirely on an uncounted row — most registries publish no counter. */
+.downloads-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* The glyph is an inlined lucide path, not a codicon, so it is sized as a box
+   rather than by font-size. Matched to the rating arrow's optical weight
+   beside it. */
+.downloads-badge svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
+}
