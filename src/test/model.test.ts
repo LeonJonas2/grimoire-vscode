@@ -40,6 +40,7 @@ import {
   isOpenableUrl,
   isValidRepo,
   contactUrl,
+  catalogRowFor,
   readDownloads,
   readSupport,
   normalizeKind,
@@ -2799,6 +2800,46 @@ suite('download counts', () => {
   test('the two sidecar signals are independent — counted does not imply rated', () => {
     const cards = buildCards([searchItem({ downloads: { total: 42, as_of: null } })], []);
     assert.strictEqual(cards[0]?.rating, null, 'a counted card is unrated, never zero-rated');
+  });
+});
+
+suite('per-source catalog rows', () => {
+  const row = (locator: string, extra: Partial<WireSearchItem> = {}): WireSearchItem =>
+    searchItem({ source: { alias: null, locator }, ...extra });
+
+  test('the signals are taken from whichever source observed them', () => {
+    // The shape the rig ships and every indexed registry produces: the OCI
+    // entry is declared first and carries the version, the index carries the
+    // sidecar's rating and pull count. Taking the FIRST match handed the
+    // details panel the row guaranteed to carry neither.
+    const merged = catalogRowFor('ghcr.io/grimoire-rs/skills/grim-usage', [
+      row('localhost:5050', { version: '1.2.0' }),
+      row('http://localhost:5052', {
+        version: null,
+        rating: { up: 42, url: 'https://forge.example/d/1' },
+        downloads: { total: 1416, as_of: null },
+      }),
+    ]);
+    assert.strictEqual(merged?.rating?.up, 42, 'the rating comes from the index row');
+    assert.strictEqual(merged?.downloads?.total, 1416, 'so does the pull count');
+    assert.strictEqual(merged?.version, '1.2.0', 'the version still comes from the registry row');
+  });
+
+  test('a repo served once is unchanged, and an unknown repo is null', () => {
+    const only = row('localhost:5050', { rating: { up: 3, url: 'u' } });
+    const merged = catalogRowFor('ghcr.io/grimoire-rs/skills/grim-usage', [only]);
+    assert.strictEqual(merged?.rating?.up, 3);
+    assert.strictEqual(merged?.version, only.version);
+    assert.strictEqual(catalogRowFor('ghcr.io/nobody/nothing', [only]), null);
+  });
+
+  test('no source carrying a signal reads as absent, never as another row leaking in', () => {
+    const merged = catalogRowFor('ghcr.io/grimoire-rs/skills/grim-usage', [
+      row('localhost:5050'),
+      row('http://localhost:5052'),
+    ]);
+    assert.strictEqual(merged?.rating, null);
+    assert.strictEqual(merged?.downloads, null);
   });
 });
 

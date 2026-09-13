@@ -582,6 +582,39 @@ export function readSupport(raw: WireSupport | undefined): SupportVM {
  * list reads as no breakdown, and neither disqualifies the total. Order is
  * grim's — highest release first — and is preserved, never re-derived.
  */
+/**
+ * The one catalog row a details panel should read for `repo`.
+ *
+ * `grim search` flattens its per-source groups, so **one repo arrives once per
+ * configured entry that serves it** — an index and the registry it indexes is
+ * the ordinary case, and the rig ships exactly that. The rows are not
+ * interchangeable: only an HTTP index observes the `stats.json` sidecar, so
+ * the index's row is the only one carrying `rating` or `downloads`, while the
+ * registry's row is the only one carrying version data (an index is a phone
+ * book and publishes none).
+ *
+ * Declaration order puts the registry first, so taking the first match handed
+ * the details panel the row guaranteed to carry NEITHER signal — the rail
+ * showed no rating and no pull count while the card that opened it, built per
+ * source, showed both.
+ *
+ * Merged rather than picked, for that reason: identity and version come from
+ * the first row, and each signal from whichever row observed it. Both are
+ * properties of the artifact, not of the source that happened to see it.
+ */
+export function catalogRowFor(repo: string, items: WireSearchItem[]): WireSearchItem | null {
+  const rows = items.filter((i) => i.repo === repo);
+  const base = rows[0];
+  if (!base) {
+    return null;
+  }
+  return {
+    ...base,
+    rating: rows.find((i) => i.rating)?.rating ?? null,
+    downloads: rows.find((i) => i.downloads)?.downloads ?? null,
+  };
+}
+
 export function readDownloads(raw: WireSearchItem['downloads']): DownloadsVM | null {
   if (!raw || typeof raw.total !== 'number') {
     return null;

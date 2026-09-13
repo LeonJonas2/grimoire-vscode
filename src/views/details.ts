@@ -36,6 +36,7 @@ import {
   buildDetailsVM,
   buildShareLink,
   buildSkeletonVM,
+  catalogRowFor,
   computeUpdateAvailable,
   declaredKey,
   findAssetPath,
@@ -235,7 +236,9 @@ export class DetailsManager implements vscode.WebviewPanelSerializer {
    * See {@link rows}.
    */
   private searchRow(repo: string): SearchItem | null {
-    const live = this.catalog.state().items.find((i) => i.repo === repo);
+    // Several configured sources can serve one repo, and the rows are NOT
+    // interchangeable — see catalogRowFor, which merges them.
+    const live = catalogRowFor(repo, this.catalog.state().items as never) as SearchItem | null;
     if (live) {
       this.rows.set(repo, live);
     }
