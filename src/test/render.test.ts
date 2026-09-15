@@ -2865,10 +2865,13 @@ suite('tree indentation', () => {
     // The class set lives in CSS and the clamp in TypeScript; this is the only
     // thing that keeps them from drifting apart. out/test/render.test.js runs
     // from out/test, so walk back up to the source tree like parity.test.ts.
-    const css = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'src', 'webview', 'sidebar', 'sidebar.css'),
-      'utf8',
-    );
+    // A Windows checkout (core.autocrlf) hands back CRLF; the regex below wants LF.
+    const css = fs
+      .readFileSync(
+        path.join(__dirname, '..', '..', 'src', 'webview', 'sidebar', 'sidebar.css'),
+        'utf8',
+      )
+      .replace(/\r\n/g, '\n');
     const paddings = new Map<number, number>();
     for (const [, level = '', px = ''] of css.matchAll(
       /^\.d(\d+) \{\n {2}padding-left: (\d+)px;\n\}/gm,
